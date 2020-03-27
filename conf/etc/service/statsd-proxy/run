@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if folder_empty /opt/statsd-proxy/config/; then
+	cp /opt/defaultconf/statsd-proxy/config/*.cfg /opt/statsd-proxy/config/
+fi
+
+exec /opt/statsd-proxy/src/statsd-proxy -f /opt/statsd-proxy/config/statsd-proxy.cfg 2>&1

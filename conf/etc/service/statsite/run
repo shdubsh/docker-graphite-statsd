@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if folder_empty /opt/statsite/config/; then
+	cp /opt/defaultconf/statsite/config/*.cfg /opt/statsite/config/
+fi
+
+exec /opt/statsite/src/statsite -f /opt/statsite/config/statsite.ini 2>&1

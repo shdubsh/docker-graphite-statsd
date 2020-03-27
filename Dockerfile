@@ -12,7 +12,6 @@ RUN true \
       logrotate \
       memcached \
       nginx \
-      nodejs \
       npm \
       py3-pyldap \
       redis \
@@ -47,6 +46,9 @@ RUN true \
       python3-dev \
       rrdtool-dev \
       wget \
+      autoconf \
+      automake \
+      libtool \
  && virtualenv /opt/graphite \
  && . /opt/graphite/bin/activate \
  && pip3 install \
@@ -90,14 +92,25 @@ RUN . /opt/graphite/bin/activate \
  && pip3 install -r requirements.txt \
  && python3 ./setup.py install
 
-# install statsd (as we have to use this ugly way)
-ARG statsd_version=0.8.6
-ARG statsd_repo=https://github.com/statsd/statsd.git
+# install statsite
+ARG statsite_branch=alpine_graphite_statsd
+ARG statsite_repo=https://github.com/shdubsh/statsite.git
 WORKDIR /opt
-RUN git clone "${statsd_repo}" \
- && cd /opt/statsd \
- && git checkout tags/v"${statsd_version}" \
- && npm install
+RUN git clone "${statsite_repo}" \
+ && cd /opt/statsite \
+ && git checkout "${statsite_branch}" \
+ && ./bootstrap.sh \
+ && ./configure \
+ && make
+
+# install hit9/statsd-proxy
+ARG statsd_proxy_version=0.0.9
+ARG statsd_proxy_repo=https://github.com/hit9/statsd-proxy.git
+WORKDIR /opt
+RUN git clone "${statsd_proxy_repo}" \
+ && cd /opt/statsd-proxy \
+ && git checkout tags/v"${statsd_proxy_version}" \
+ && make
 
 COPY conf/opt/graphite/conf/                             /opt/defaultconf/graphite/
 COPY conf/opt/graphite/webapp/graphite/local_settings.py /opt/defaultconf/graphite/local_settings.py
@@ -109,8 +122,11 @@ WORKDIR /opt/graphite/webapp
 RUN mkdir -p /var/log/graphite/ \
   && PYTHONPATH=/opt/graphite/webapp /opt/graphite/bin/django-admin.py collectstatic --noinput --settings=graphite.settings
 
-# config statsd
-COPY conf/opt/statsd/config/ /opt/defaultconf/statsd/config/
+# config statsd-proxy
+COPY conf/opt/statsd-proxy/config/ /opt/defaultconf/statsd-proxy/config/
+
+#config statsite
+COPY conf/opt/statsite/config/ /opt/defaultconf/statsite/config/
 
 FROM base as production
 LABEL maintainer="Denys Zhdanov <denis.zhdanov@gmail.com>"
